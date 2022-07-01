@@ -2,9 +2,21 @@
 
 ## Базовая конфигурация
 
-Миграция:
+Добавьте миграции в ваше приложение, отредактируйте конфигурационный файл консоли, чтобы настроить миграцию пространства имен:
 
-`yii migrate --migrationNamespaces=mheads\filestorage\migrations`
+```php
+'controllerMap' => [
+    // ...
+    'migrate' => [
+        'class' => 'yii\console\controllers\MigrateController',
+        'migrationPath' => null,
+        'migrationNamespaces' => [
+            // ...
+            'mheads\filestorage\migrations',
+        ],
+    ],
+],
+```
 
 Базовая конфигурация приложения:
 
