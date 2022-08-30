@@ -98,6 +98,11 @@ class FileSystemStore extends Component implements IStore
 		return file_get_contents($this->_getFilePath($file));
 	}
 
+	public function getFileResource(File $file)
+	{
+		return fopen($this->_getFilePath($file), 'r');
+	}
+
 	/**
 	 * @throws InvalidConfigException
 	 */

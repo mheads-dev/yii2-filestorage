@@ -91,6 +91,15 @@ class File extends ActiveRecord
 		return $this->getStore()->getFileContent($this);
 	}
 
+	/**
+	 * @throws \yii\base\InvalidConfigException
+	 * @return resource|null
+	 */
+	public function getResource()
+	{
+		return $this->getStore()->getFileResource($this);
+	}
+
 	public function getUploadedFile(): ?UploadedFile
 	{
 		return $this->uploadedFile;

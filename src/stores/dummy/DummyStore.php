@@ -37,4 +37,9 @@ class DummyStore extends Component implements IStore
 	{
 		return print_r($file->toArray(), 1);
 	}
+
+	public function getFileResource(File $file)
+	{
+		return NULL;
+	}
 }

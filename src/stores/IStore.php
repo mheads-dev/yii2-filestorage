@@ -30,4 +30,9 @@ interface IStore
 	public function getFileUrl(File $file): ?string;
 
 	public function getFileContent(File $file): ?string;
+
+	/**
+	 * @return resource|null
+	 */
+	public function getFileResource(File $file);
 }
