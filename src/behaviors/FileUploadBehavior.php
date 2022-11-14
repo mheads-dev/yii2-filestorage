@@ -99,7 +99,11 @@ class FileUploadBehavior extends Behavior
 	public function afterSave(AfterSaveEvent $event): void
 	{
 		$this->addedFiles = [];
-		if(!empty($fileId = $event->changedAttributes[$this->targetAttribute]) && is_numeric($fileId))
+		if(
+			isset($event->changedAttributes[$this->targetAttribute])
+			&& !empty($fileId = $event->changedAttributes[$this->targetAttribute])
+			&& is_numeric($fileId)
+		)
 		{
 			$file = $this->fileClass::findOne($fileId);
 			if($file) $file->remove();
