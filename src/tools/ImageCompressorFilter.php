@@ -44,7 +44,7 @@ class ImageCompressorFilter extends Validator
 	}
 
 	/**
-	 * @return UploadedFile|\mheads\dbfiles\UploadedFile
+	 * @return UploadedFile|\mheads\filestorage\tools\UploadedFile
 	 */
 	private function compress(UploadedFile $file)
 	{

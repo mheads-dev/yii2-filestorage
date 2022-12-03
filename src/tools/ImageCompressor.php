@@ -13,7 +13,6 @@ namespace mheads\filestorage\tools;
 
 use Imagine\Image\ImageInterface;
 use Imagine\Image\ImagineInterface;
-use mheads\dbfiles\UploadedFile;
 use yii\helpers\FileHelper;
 
 class ImageCompressor
