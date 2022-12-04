@@ -27,13 +27,14 @@ class FileUploadBehavior extends Behavior
 	/** @var string - Если не указать, то будет подставлено значение из $attribute */
 	public string $targetAttribute = '';
 
-	/** @var ?string - Если не указать, то будет подставлено значение из \alse\filestorage\Storage::$defaultStoreName */
-	public ?string $storeName = NULL;
+	/** @var ?string|callable - Если не указать, то будет подставлено значение из \alse\filestorage\Storage::$defaultStoreName */
+	public $storeName = NULL;
 
-	/** @var ?string - Если не указать, то будет подставлено значение из \alse\filestorage\Storage::$defaultGroupName */
-	public ?string $groupName = NULL;
+	/** @var ?string|callable - Если не указать, то будет подставлено значение из \alse\filestorage\Storage::$defaultGroupName */
+	public $groupName = NULL;
 
-	public bool $isPrivate = false;
+	/** @var bool|callable */
+	public $isPrivate = false;
 
 	/** @var string|File - classname */
 	public string $fileClass = File::class;
@@ -84,12 +85,16 @@ class FileUploadBehavior extends Behavior
 	{
 		if($this->owner->getAttribute($this->attribute) instanceof UploadedFile)
 		{
+			$storeName = is_callable($this->storeName) ? call_user_func($this->storeName):$this->storeName;
+			$groupName = is_callable($this->groupName) ? call_user_func($this->groupName):$this->groupName;
+			$isPrivate = (bool)(is_callable($this->isPrivate) ? call_user_func($this->isPrivate):$this->isPrivate);
+
 			$file = $this->fileClass::create(
 				$this->owner->getAttribute($this->attribute),
-				$this->groupName,
-				$this->storeName,
+				$groupName,
+				$storeName,
 			);
-			$file->setIsPrivate($this->isPrivate);
+			$file->setIsPrivate($isPrivate);
 			$file->add();
 			$this->addedFiles[] = $file;
 			$this->owner->setAttribute($this->targetAttribute, $file->getId());
