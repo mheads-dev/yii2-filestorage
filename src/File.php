@@ -188,6 +188,7 @@ class File extends ActiveRecord
 
 	public function setOriginalName(string $value): void
 	{
+		$value = str_replace(["\n\r", "\n", "\r"], " ", $value);
 		$this->setAttribute(self::field_original_name, $value);
 	}
 
