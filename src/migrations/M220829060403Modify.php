@@ -2,20 +2,17 @@
 
 namespace mheads\filestorage\migrations;
 
-use yii\db\Migration;
+use mheads\filestorage\Migration;
 
 class M220829060403Modify extends Migration
 {
-	public $tableName = '{{%file}}';
-	public $tableOptions;
-
 	/**
 	 * {@inheritdoc}
 	 */
 	public function safeUp()
 	{
 		$this->alterColumn(
-			$this->tableName,
+			$this->getFileTableName(),
 			'external_id',
 			$this->string(1000)->null()
 		);
@@ -27,7 +24,7 @@ class M220829060403Modify extends Migration
 	public function safeDown()
 	{
 		$this->alterColumn(
-			$this->tableName,
+			$this->getFileTableName(),
 			'external_id',
 			$this->string(255)->null()
 		);

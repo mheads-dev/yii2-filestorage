@@ -2,11 +2,10 @@
 
 namespace mheads\filestorage\migrations;
 
-use yii\db\Migration;
+use mheads\filestorage\Migration;
 
 class M220611130407Init extends Migration
 {
-	public $tableName = '{{%file}}';
 	public $tableOptions;
 
 	/**
@@ -14,7 +13,9 @@ class M220611130407Init extends Migration
 	 */
 	public function safeUp()
 	{
-		$this->createTable($this->tableName, [
+		$tableName = $this->getFileTableName();
+
+		$this->createTable($tableName, [
 			'id'            => $this->primaryKey(18),
 			'store_name'    => $this->string(255)->null(),
 			'external_id'   => $this->string(255)->null(),
@@ -31,8 +32,8 @@ class M220611130407Init extends Migration
 			'created_at'    => $this->integer(11)->null(),
 		], $this->tableOptions);
 
-		$this->createIndex('store_name', $this->tableName, 'store_name');
-		$this->createIndex('group_name', $this->tableName, 'group_name');
+		$this->createIndex('store_name', $tableName, 'store_name');
+		$this->createIndex('group_name', $tableName, 'group_name');
 	}
 
 	/**
@@ -40,6 +41,6 @@ class M220611130407Init extends Migration
 	 */
 	public function safeDown()
 	{
-		$this->dropTable($this->tableName);
+		$this->dropTable($this->getFileTableName());
 	}
 }

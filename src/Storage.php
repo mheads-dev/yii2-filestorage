@@ -18,7 +18,6 @@ use yii\base\Component;
 use yii\base\InvalidConfigException;
 use yii\db\Connection;
 use yii\di\Instance;
-use function Symfony\Component\String\u;
 
 class Storage extends Component
 {
@@ -28,6 +27,8 @@ class Storage extends Component
 	public $db = 'db';
 
 	/**
+	 * Название таблицы с файлами.
+	 * Нельзя изменить после установки миграций
 	 * @var string table name
 	 */
 	public $fileTableName = '{{%file}}';

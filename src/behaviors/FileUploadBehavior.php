@@ -39,6 +39,17 @@ class FileUploadBehavior extends Behavior
 	/** @var string|File - classname */
 	public string $fileClass = File::class;
 
+	/**
+	 * Удалять старые файлы при изменении файла или удалении сущности
+	 * @var bool
+	 */
+	public bool $enableAutoCleaning = true;
+
+	/**
+	 * @deprecated
+	 * @see FileUploadBehavior::$enableAutoCleaning
+	 * @var bool
+	 */
 	public bool $afterDelete = true;
 
 	/**
@@ -46,7 +57,10 @@ class FileUploadBehavior extends Behavior
 	 */
 	public $owner;
 
-	/** @var File[] */
+	/**
+	 * Сюда записываются добавленные файлы. Чтобы их удалить, если что-то пошло не так.
+	 * @var File[]
+	 */
 	private array $addedFiles = [];
 
 	public function init()
@@ -104,25 +118,33 @@ class FileUploadBehavior extends Behavior
 	public function afterSave(AfterSaveEvent $event): void
 	{
 		$this->addedFiles = [];
+		if(!$this->enableAutoCleaning) return;
+
 		if(
 			isset($event->changedAttributes[$this->targetAttribute])
 			&& !empty($fileId = $event->changedAttributes[$this->targetAttribute])
 			&& is_numeric($fileId)
 		)
 		{
-			$file = $this->fileClass::findOne($fileId);
+			$file = $this->findFile($fileId);
 			if($file) $file->remove();
 		}
 	}
 
 	public function afterDelete(): void
 	{
-		if(!$this->afterDelete) return;
+		if(!$this->enableAutoCleaning) return;
+
 		if(!empty($fileId = $this->owner->getAttribute($this->targetAttribute)) && is_numeric($fileId))
 		{
-			$file = $this->fileClass::findOne($fileId);
+			$file = $this->findFile($fileId);
 			if($file) $file->remove();
 		}
+	}
+
+	protected function findFile(int $id): ?File
+	{
+		return $this->fileClass::find()->where([File::field_id => $id])->one();
 	}
 
 	public function cleaning()
