@@ -11,6 +11,8 @@
 
 namespace mheads\filestorage\tools;
 
+use mheads\filestorage\File;
+use yii\base\InvalidConfigException;
 use yii\helpers\FileHelper;
 
 class UploadedFile extends \yii\web\UploadedFile
@@ -19,10 +21,43 @@ class UploadedFile extends \yii\web\UploadedFile
 	public $isCreatedByPath = false;
 
 	/**
+	 * @param File $fromFile
+	 * @return static
+	 * @throws InvalidConfigException
+	 */
+	public static function createByFile(File $fromFile): UploadedFile
+	{
+		return static::createByContent(
+			$fromFile->getContent(),
+			$fromFile->getOriginalName()
+		);
+	}
+
+	/**
+	 * @param string $content
+	 * @param string $name
+	 * @return static
+	 * @throws InvalidConfigException
+	 */
+	public static function createByContent(string $content, string $name): UploadedFile
+	{
+		$file = new static();
+		$file->name = $name;
+		$file->tempName = tempnam(sys_get_temp_dir(), 'yii');
+		file_put_contents($file->tempName, $content);
+		$file->type = FileHelper::getMimeType($file->tempName);
+		$file->size = filesize($file->tempName);
+		$file->isCreatedByPath = true;
+
+		return $file;
+	}
+
+	/**
 	 * @param string $filePath
 	 * @return static
+	 * @throws InvalidConfigException
 	 */
-	public static function createByPath($filePath)
+	public static function createByPath(string $filePath): UploadedFile
 	{
 		$file = new static();
 		$file->name = pathinfo($filePath, PATHINFO_BASENAME);
@@ -35,7 +70,7 @@ class UploadedFile extends \yii\web\UploadedFile
 		return $file;
 	}
 
-	public function saveAs($file, $deleteTempFile = true)
+	public function saveAs($file, $deleteTempFile = true): bool
 	{
 		if($this->isCreatedByPath)
 		{
