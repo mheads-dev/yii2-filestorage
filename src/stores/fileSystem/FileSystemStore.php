@@ -54,6 +54,7 @@ class FileSystemStore extends Component implements IStore
 		$basePath = $this->obtainBasePath($file->isPrivate());
 		$fileName = preg_replace('/[^a-zA-Z0-9-_.\s]+/u', '', Inflector::transliterate($file->getOriginalName()));
 		$fileName = preg_replace('/\s/u', '_', $fileName);
+		$fileName = static::randomString(6) . '-' . $fileName;
 
 		$directoryPath = self::generateDirectoryPath(
 			$groupDirName,
@@ -80,7 +81,11 @@ class FileSystemStore extends Component implements IStore
 	public function removeFile(File $file): void
 	{
 		$filePath = $this->_getFilePath($file);
+
 		FileHelper::unlink($filePath);
+
+		$directoryPath = dirname($filePath);
+		$this->removeEmptyDirectory($directoryPath);
 	}
 
 	public function getFileUrl(File $file): ?string
@@ -135,12 +140,12 @@ class FileSystemStore extends Component implements IStore
 		$i = 0;
 		do
 		{
-			$path = $groupDirName.'/'.static::randomString(3);
+			$path = $groupDirName.'/'.static::randomString(2);
 			++$i;
 			if($i > 100000)
 			{
 				return static::generateDirectoryPath(
-					$groupDirName.'/'.static::randomString(3),
+					$groupDirName.'/'.static::randomString(2),
 					$fileName,
 					$basePath
 				);
@@ -152,7 +157,7 @@ class FileSystemStore extends Component implements IStore
 
 	protected static function randomString(int $length): string
 	{
-		$chars = 'qwertyuiopasdfghjklzxcvbnm1234567890';
+		$chars = 'abcdefgh1234567890';
 		$n = strlen($chars) - 1;
 
 		$result = '';
@@ -163,5 +168,25 @@ class FileSystemStore extends Component implements IStore
 		}
 
 		return $result;
+	}
+
+	protected function removeEmptyDirectory(string $directoryPath): void
+	{
+		$directoryPath = FileHelper::normalizePath($directoryPath);
+
+		if(!is_dir($directoryPath))
+		{
+			return;
+		}
+
+		if($this->isDirectoryEmpty($directoryPath))
+		{
+			FileHelper::removeDirectory($directoryPath);
+		}
+	}
+
+	protected function isDirectoryEmpty(string $path): bool
+	{
+		return is_dir($path) && count(FileHelper::findFiles($path, ['recursive' => false])) === 0;
 	}
 }
