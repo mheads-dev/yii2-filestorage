@@ -11,6 +11,8 @@
 
 namespace mheads\filestorage\stores\fileSystem;
 
+use DateTimeImmutable;
+use InvalidArgumentException;
 use mheads\filestorage\exceptions\AddException;
 use mheads\filestorage\File;
 use mheads\filestorage\stores\IStore;
@@ -62,12 +64,12 @@ class FileSystemStore extends Component implements IStore
 			$basePath
 		);
 
-		if(!is_dir($basePath.'/'.$directoryPath))
+		if(!empty($directoryPath) && !is_dir($basePath.'/'.$directoryPath))
 		{
 			FileHelper::createDirectory($basePath.'/'.$directoryPath);
 		}
 
-		if(!$file->getUploadedFile()->saveAs($basePath.'/'.$directoryPath.'/'.$fileName))
+		if(empty($directoryPath) || !$file->getUploadedFile()->saveAs($basePath.'/'.$directoryPath.'/'.$fileName))
 		{
 			throw new AddException('File save error');
 		}
@@ -135,29 +137,29 @@ class FileSystemStore extends Component implements IStore
 		string $groupDirName,
 		string $fileName,
 		string $basePath
-	): string
+	): ?string
 	{
-		$i = 0;
-		do
+		$path = $groupDirName.'/'.static::generateTimeBucketPrefix();
+		if (file_exists(FileHelper::normalizePath($basePath.'/'.$path.'/'.$fileName)))
 		{
-			$path = $groupDirName.'/'.static::randomString(2);
-			++$i;
-			if($i > 100000)
+			$i = 0;
+			do
 			{
-				return static::generateDirectoryPath(
-					$groupDirName.'/'.static::randomString(2),
-					$fileName,
-					$basePath
-				);
-			}
-		} while(file_exists(FileHelper::normalizePath($basePath.'/'.$path.'/'.$fileName)));
+				$path = $groupDirName.'/'.static::generateTimeBucketPrefix().'/'.static::randomString(4);
+				++$i;
+				if ($i > 0xFFFF)
+				{
+					return NULL;
+				}
+			} while(file_exists(FileHelper::normalizePath($basePath.'/'.$path.'/'.$fileName)));
+		}
 
 		return $path;
 	}
 
 	protected static function randomString(int $length): string
 	{
-		$chars = 'abcdefgh1234567890';
+		$chars = 'abcdef1234567890';
 		$n = strlen($chars) - 1;
 
 		$result = '';
@@ -169,6 +171,35 @@ class FileSystemStore extends Component implements IStore
 
 		return $result;
 	}
+
+	/**
+	 * Генерирует 3-символьный hex-префикс, привязанный ко времени суток.
+	 *
+	 * Чтобы файлы, сохраненные в пределах одного временного бакета,
+	 * (с высокой долей вероятности) получали один и тот же префикс/подкаталог
+	 */
+	protected static function generateTimeBucketPrefix(): string
+	{
+		$prefixTime = new DateTimeImmutable();
+
+		// Секунды с начала суток
+		$secondsInDay = $prefixTime->getTimestamp() % 86400;
+
+		// Номер бакета внутри суток (файлы в рамках минуты попадают в один бакет)
+		$bucket = intdiv($secondsInDay, 60);
+
+		// Хешируем бакет для более равномерного распределения итоговых значений
+		$unsignedHash = (int) sprintf('%u', crc32((string)$bucket));
+
+		// Случайное расщепление (файлы из одного бакета дополнительно "размазываются" на окно в 8 вариантов)
+		// для сглаживания случаев, когда большая масса файлов генерится в пределах нескольких секунд (например в крон-задачах)
+		$slot = mt_rand(0, 7);
+
+		$prefixValue = ($unsignedHash + $slot) % 1024; //ограничиваем число подкаталогов лимитом в 1024
+
+		return str_pad(dechex($prefixValue), 3, '0', STR_PAD_LEFT);
+	}
+
 
 	protected function removeEmptyDirectory(string $directoryPath): void
 	{
@@ -187,6 +218,16 @@ class FileSystemStore extends Component implements IStore
 
 	protected function isDirectoryEmpty(string $path): bool
 	{
-		return is_dir($path) && count(FileHelper::findFiles($path, ['recursive' => false])) === 0;
+		if(!is_dir($path))
+		{
+			return true;
+		}
+
+		$iterator = new \FilesystemIterator(
+			$path,
+			\FilesystemIterator::SKIP_DOTS
+		);
+
+		return !$iterator->valid();
 	}
 }
