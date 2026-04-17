@@ -18,6 +18,7 @@ use mheads\filestorage\stores\fileSystem\pathProcessor\RandomPathProcessor;
 use mheads\filestorage\stores\IStore;
 use yii\base\Component;
 use yii\base\InvalidConfigException;
+use yii\di\Instance;
 use yii\helpers\FileHelper;
 use yii\helpers\Inflector;
 
@@ -38,19 +39,19 @@ class FileSystemStore extends Component implements IStore
 	/** @var bool - Включить протокол https. Используется при генерации URL файла */
 	public bool $isHttps = false;
 
-	/** @var class-string<PathProcessorInterface> - класс path-процессора, который будет использоваться в хранилище */
-	public string $pathProcessorClass = RandomPathProcessor::class;
+	/** @var string|array|PathProcessorInterface path-процессор, который будет использоваться в хранилище */
+	public string|array|PathProcessorInterface $pathProcessor = RandomPathProcessor::class;
 
-	public function init()
+	/**
+	 * @throws InvalidConfigException
+	 */
+	public function init(): void
 	{
 		if(strlen($this->basePath)) $this->basePath = rtrim($this->basePath, '/');
 		if(strlen($this->basePrivatePath)) $this->basePrivatePath = rtrim($this->basePrivatePath, '/');
 		if(strlen($this->baseUrl)) $this->baseUrl = rtrim($this->baseUrl, '/');
 
-		if (!is_subclass_of($this->pathProcessorClass, PathProcessorInterface::class))
-		{
-			throw new InvalidConfigException("Invalid PathProcessor class '{$this->pathProcessorClass}'.");
-		}
+		$this->pathProcessor = Instance::ensure($this->pathProcessor,	PathProcessorInterface::class);
 	}
 
 	/**
@@ -93,8 +94,9 @@ class FileSystemStore extends Component implements IStore
 		FileHelper::unlink($filePath);
 
 		//очистка каталогов, если после удаления они опустели
+		$groupDirName = trim($file->getGroupName(), '/');
 		$this->cleanPath(
-			$this->obtainBasePath($file->isPrivate()).'/'.$file->getGroupName(),
+			$this->obtainBasePath($file->isPrivate()).'/'.$groupDirName,
 			dirname($filePath)
 		);
 	}
@@ -148,7 +150,7 @@ class FileSystemStore extends Component implements IStore
 		string $basePath
 	): string
 	{
-		return $this->pathProcessorClass::generateDirectoryPath($groupDirName, $fileName, $basePath);
+		return $this->pathProcessor->generateDirectoryPath($groupDirName, $fileName, $basePath);
 	}
 
 	/**

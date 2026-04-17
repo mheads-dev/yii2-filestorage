@@ -2,12 +2,13 @@
 
 namespace mheads\filestorage\stores\fileSystem\pathProcessor;
 
+use yii\base\Component;
 use yii\helpers\FileHelper;
 
-class RandomPathProcessor implements PathProcessorInterface
+class RandomPathProcessor extends Component implements PathProcessorInterface
 {
 
-	public static function generateDirectoryPath(
+	public function generateDirectoryPath(
 		string $groupDirName,
 		string $fileName,
 		string $basePath

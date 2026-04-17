@@ -3,12 +3,14 @@
 namespace mheads\filestorage\stores\fileSystem\pathProcessor;
 
 use DateTimeImmutable;
+use mheads\filestorage\exceptions\BaseException;
+use yii\base\Component;
 use yii\helpers\FileHelper;
 
-class DateTimePathProcessor implements PathProcessorInterface
+class DateTimePathProcessor extends Component implements PathProcessorInterface
 {
 
-	public static function generateDirectoryPath(
+	public function generateDirectoryPath(
 		string $groupDirName,
 		string $fileName,
 		string $basePath
@@ -28,7 +30,8 @@ class DateTimePathProcessor implements PathProcessorInterface
 				$i++;
 				if ($i > 16)
 				{
-					break;
+					//по идее сюда никогда попасть не должны
+					throw new BaseException("Error generating a unique path");
 				}
 			} while(file_exists(FileHelper::normalizePath($basePath.'/'.$path.'/'.$fileName)));
 		}
@@ -94,7 +97,7 @@ class DateTimePathProcessor implements PathProcessorInterface
 
 		for($i = 0; $i < $length; $i++)
 		{
-			$result .= $chars[mt_rand(0, $n)];
+			$result .= $chars[random_int(0, $n)];
 		}
 
 		return $result;
