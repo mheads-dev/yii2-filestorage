@@ -18,6 +18,7 @@
 - Обновлён `FileSystemStore`: добавлена поддержка настраиваемого `pathProcessor` (`string|array|PathProcessorInterface`).
 - Генерация пути директории в `FileSystemStore::addFile()` переведена на делегирование в процессор путей.
 - Добавлено DI-разрешение процессора путей через `yii\di\Instance::ensure()`.
+- В `composer.json` добавлено ограничение версии PHP: `^8.0`.
 
 ### Fixed
 - Добавлена очистка пустых директорий после удаления файла в `FileSystemStore::removeFile()`.

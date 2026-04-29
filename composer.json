@@ -4,6 +4,7 @@
     "type": "yii2-extension",
 	"keywords": ["yii2","extension","file manager","file storage"],
     "require": {
+        "php": "^8.0",
         "yiisoft/yii2": "~2.0.0",
 		"imagine/imagine": "^1.3"
     },
