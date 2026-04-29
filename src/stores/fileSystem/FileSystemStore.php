@@ -13,9 +13,12 @@ namespace mheads\filestorage\stores\fileSystem;
 
 use mheads\filestorage\exceptions\AddException;
 use mheads\filestorage\File;
+use mheads\filestorage\stores\fileSystem\pathProcessor\PathProcessorInterface;
+use mheads\filestorage\stores\fileSystem\pathProcessor\RandomPathProcessor;
 use mheads\filestorage\stores\IStore;
 use yii\base\Component;
 use yii\base\InvalidConfigException;
+use yii\di\Instance;
 use yii\helpers\FileHelper;
 use yii\helpers\Inflector;
 
@@ -36,11 +39,19 @@ class FileSystemStore extends Component implements IStore
 	/** @var bool - Включить протокол https. Используется при генерации URL файла */
 	public bool $isHttps = false;
 
-	public function init()
+	/** @var string|array|PathProcessorInterface path-процессор, который будет использоваться в хранилище */
+	public string|array|PathProcessorInterface $pathProcessor = RandomPathProcessor::class;
+
+	/**
+	 * @throws InvalidConfigException
+	 */
+	public function init(): void
 	{
 		if(strlen($this->basePath)) $this->basePath = rtrim($this->basePath, '/');
 		if(strlen($this->basePrivatePath)) $this->basePrivatePath = rtrim($this->basePrivatePath, '/');
 		if(strlen($this->baseUrl)) $this->baseUrl = rtrim($this->baseUrl, '/');
+
+		$this->pathProcessor = Instance::ensure($this->pathProcessor,	PathProcessorInterface::class);
 	}
 
 	/**
@@ -55,7 +66,7 @@ class FileSystemStore extends Component implements IStore
 		$fileName = preg_replace('/[^a-zA-Z0-9-_.\s]+/u', '', Inflector::transliterate($file->getOriginalName()));
 		$fileName = preg_replace('/\s/u', '_', $fileName);
 
-		$directoryPath = self::generateDirectoryPath(
+		$directoryPath = $this->generateDirectoryPath(
 			$groupDirName,
 			$fileName,
 			$basePath
@@ -81,6 +92,13 @@ class FileSystemStore extends Component implements IStore
 	{
 		$filePath = $this->_getFilePath($file);
 		FileHelper::unlink($filePath);
+
+		//очистка каталогов, если после удаления они опустели
+		$groupDirName = trim($file->getGroupName(), '/');
+		$this->cleanPath(
+			$this->obtainBasePath($file->isPrivate()).'/'.$groupDirName,
+			dirname($filePath)
+		);
 	}
 
 	public function getFileUrl(File $file): ?string
@@ -126,42 +144,68 @@ class FileSystemStore extends Component implements IStore
 		return \Yii::getAlias($basePath);
 	}
 
-	protected static function generateDirectoryPath(
+	protected function generateDirectoryPath(
 		string $groupDirName,
 		string $fileName,
 		string $basePath
 	): string
 	{
-		$i = 0;
-		do
-		{
-			$path = $groupDirName.'/'.static::randomString(3);
-			++$i;
-			if($i > 100000)
-			{
-				return static::generateDirectoryPath(
-					$groupDirName.'/'.static::randomString(3),
-					$fileName,
-					$basePath
-				);
-			}
-		} while(file_exists(FileHelper::normalizePath($basePath.'/'.$path.'/'.$fileName)));
-
-		return $path;
+		return $this->pathProcessor->generateDirectoryPath($groupDirName, $fileName, $basePath);
 	}
 
-	protected static function randomString(int $length): string
+	/**
+	 * Удаляет пустые подкаталоги, поднимаясь от $path до $rootDir
+	 * $roorDir не удаляется, даже если пуста
+	 * @param string $rootDir корневой путь
+	 * @param string $path дочерний путь
+	 * @return void
+	 */
+	protected function cleanPath(string $rootDir, string $path): void
 	{
-		$chars = 'qwertyuiopasdfghjklzxcvbnm1234567890';
-		$n = strlen($chars) - 1;
+		$rootDir = rtrim(FileHelper::normalizePath($rootDir), DIRECTORY_SEPARATOR);
+		$path = rtrim(FileHelper::normalizePath($path), DIRECTORY_SEPARATOR);
 
-		$result = '';
-
-		for($i = 0; $i < $length; $i++)
+		if($path === $rootDir) //дошли до корневого пути
 		{
-			$result .= $chars[mt_rand(0, $n)];
+			return;
 		}
 
-		return $result;
+		//проверка что корневой путь - строго часть дочернего
+		if(strpos($path . DIRECTORY_SEPARATOR, $rootDir . DIRECTORY_SEPARATOR) !== 0)
+		{
+			return;
+		}
+
+		while($path !== $rootDir)
+		{
+			if(!is_dir($path))
+			{
+				$path = dirname($path);
+				continue;
+			}
+
+			if(!$this->isDirectoryEmpty($path))
+			{
+				break;
+			}
+
+			FileHelper::removeDirectory($path);
+			$path = dirname($path);
+		}
+	}
+
+	protected function isDirectoryEmpty(string $path): bool
+	{
+		if(!is_dir($path))
+		{
+			return false;
+		}
+
+		$iterator = new \FilesystemIterator(
+			$path,
+			\FilesystemIterator::SKIP_DOTS
+		);
+
+		return !$iterator->valid();
 	}
 }
